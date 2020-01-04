@@ -22,13 +22,18 @@
 #include <Box2D/Common/b2Settings.h>
 #include <Box2D/Collision/b2Collision.h>
 #include <Box2D/Collision/b2DynamicTree.h>
-#include <algorithm>
+#include <string.h>
+//#include <algorithm>
 
 struct b2Pair
 {
 	int32 proxyIdA;
 	int32 proxyIdB;
 };
+
+typedef bool (*pair_compare)(const b2Pair& pair1, const b2Pair& pair2);
+
+extern "C" void box2d_sort_pairs(b2Pair*,int,pair_compare);
 
 /// The broad-phase is used for computing pairs and performing volume queries and ray casts.
 /// This broad-phase does not persist pairs. Instead, this reports potentially new pairs.
@@ -208,7 +213,7 @@ void b2BroadPhase::UpdatePairs(T* callback)
 	m_moveCount = 0;
 
 	// Sort the pair buffer to expose duplicates.
-	std::sort(m_pairBuffer, m_pairBuffer + m_pairCount, b2PairLessThan);
+	box2d_sort_pairs(m_pairBuffer, m_pairCount, b2PairLessThan);
 
 	// Send the pairs back to the client.
 	int32 i = 0;

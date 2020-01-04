@@ -17,7 +17,7 @@
 */
 
 #include <Box2D/Collision/Shapes/b2PolygonShape.h>
-#include <new>
+#include <memory.h>
 
 b2Shape* b2PolygonShape::Clone(b2BlockAllocator* allocator) const
 {
