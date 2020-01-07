@@ -85,17 +85,21 @@ float32 b2Timer::GetMilliseconds() const
 
 #else
 
+extern "C" float64 perf_now();
+
 b2Timer::b2Timer()
 {
+	m_start = perf_now();
 }
 
 void b2Timer::Reset()
 {
+	m_start = perf_now();
 }
 
 float32 b2Timer::GetMilliseconds() const
 {
-	return 0.0f;
+	return perf_now() - m_start;
 }
 
 #endif

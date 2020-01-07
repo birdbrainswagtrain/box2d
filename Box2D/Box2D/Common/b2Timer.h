@@ -44,6 +44,8 @@ private:
 #elif defined(__linux__) || defined (__APPLE__)
 	unsigned long m_start_sec;
 	unsigned long m_start_usec;
+#else
+	float64 m_start;
 #endif
 };
 
