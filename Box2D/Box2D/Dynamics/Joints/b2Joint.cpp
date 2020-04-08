@@ -32,7 +32,7 @@
 #include <Box2D/Dynamics/b2World.h>
 #include <Box2D/Common/b2BlockAllocator.h>
 
-#include <new>
+#include <memory.h>
 
 b2Joint* b2Joint::Create(const b2JointDef* def, b2BlockAllocator* allocator)
 {
