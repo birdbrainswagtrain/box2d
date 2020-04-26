@@ -20,11 +20,15 @@
 #define B2_SETTINGS_H
 
 #include <stddef.h>
-#include <assert.h>
 #include <float.h>
 
+extern "C" void log_fatal(const char*);
+
+#define STRINGIFY_INNER(x) #x
+#define STRINGIFY(x) STRINGIFY_INNER(x)
+
 #define B2_NOT_USED(x) ((void)(x))
-#define b2Assert(A) assert(A)
+#define b2Assert(A) if (!(A)) log_fatal("ASSERT FAILED @ " __FILE__ ":" STRINGIFY(__LINE__));
 
 typedef signed char	int8;
 typedef signed short int16;
@@ -87,7 +91,7 @@ typedef double float64;
 
 /// A velocity threshold for elastic collisions. Any collision with a relative linear
 /// velocity below this threshold will be treated as inelastic.
-#define b2_velocityThreshold		1.0f
+#define b2_velocityThreshold		3.0f
 
 /// The maximum linear position correction used when solving constraints. This helps to
 /// prevent overshoot.

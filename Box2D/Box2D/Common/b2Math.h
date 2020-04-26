@@ -56,13 +56,18 @@ struct b2Vec2
 	b2Vec2() {}
 
 	/// Construct using coordinates.
-	b2Vec2(float32 x, float32 y) : x(x), y(y) {}
+	b2Vec2(float32 x, float32 y) : x(x), y(y) {
+		b2Assert( IsValid() ); // add this
+	}
 
 	/// Set this vector to all zeros.
 	void SetZero() { x = 0.0f; y = 0.0f; }
 
 	/// Set this vector to some specified coordinates.
-	void Set(float32 x_, float32 y_) { x = x_; y = y_; }
+	void Set(float32 x_, float32 y_) {
+		x = x_; y = y_;
+		b2Assert( IsValid() ); // add this
+	}
 
 	/// Negate this vector.
 	b2Vec2 operator -() const { b2Vec2 v; v.Set(-x, -y); return v; }
@@ -83,18 +88,21 @@ struct b2Vec2
 	void operator += (const b2Vec2& v)
 	{
 		x += v.x; y += v.y;
+		b2Assert( IsValid() ); // add this
 	}
 	
 	/// Subtract a vector from this vector.
 	void operator -= (const b2Vec2& v)
 	{
 		x -= v.x; y -= v.y;
+		b2Assert( IsValid() ); // add this
 	}
 
 	/// Multiply this vector by a scalar.
 	void operator *= (float32 a)
 	{
 		x *= a; y *= a;
+		b2Assert( IsValid() ); // add this
 	}
 
 	/// Get the length of this vector (the norm).
@@ -121,6 +129,7 @@ struct b2Vec2
 		float32 invLength = 1.0f / length;
 		x *= invLength;
 		y *= invLength;
+		b2Assert( IsValid() ); // add this
 
 		return length;
 	}
