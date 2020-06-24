@@ -22,13 +22,16 @@
 #include <stddef.h>
 #include <float.h>
 
+extern "C" void log_msg(const char*);
 extern "C" void log_fatal(const char*);
+extern "C" void log_fixture(int);
 
 #define STRINGIFY_INNER(x) #x
 #define STRINGIFY(x) STRINGIFY_INNER(x)
 
 #define B2_NOT_USED(x) ((void)(x))
-#define b2Assert(A) if (!(A)) log_fatal("ASSERT FAILED @ " __FILE__ ":" STRINGIFY(__LINE__));
+//#define b2Assert(A) if (!(A)) log_fatal("ASSERT FAILED @ " __FILE__ ":" STRINGIFY(__LINE__));
+#define b2Assert(A) B2_NOT_USED(A)
 
 typedef signed char	int8;
 typedef signed short int16;

@@ -87,6 +87,12 @@ b2ContactSolver::b2ContactSolver(b2ContactSolverDef* def)
 		vc->K.SetZero();
 		vc->normalMass.SetZero();
 
+		// check!!!
+		{
+			b2Assert( b2IsValid( m_velocities[vc->indexA].w) );
+			b2Assert( b2IsValid( m_velocities[vc->indexB].w) );
+		}
+
 		b2ContactPositionConstraint* pc = m_positionConstraints + i;
 		pc->indexA = bodyA->m_islandIndex;
 		pc->indexB = bodyB->m_islandIndex;
@@ -248,6 +254,52 @@ void b2ContactSolver::InitializeVelocityConstraints()
 	}
 }
 
+float checkFloat(float x, const char* msg, b2ContactVelocityConstraint* vc) {
+	const float LIMIT = 10000;
+	if (!b2IsValid(x)) {// || x > LIMIT || x < -LIMIT) {
+		b2Vec2 normal = vc->normal;
+		b2Vec2 tangent = b2Cross(normal, 1.0f);
+		
+		b2Log("> value = %f\n",x);
+		b2Log("> invI = %f %f\n",vc->invIA,vc->invIB);
+		b2Log("> normal = %f %f\n",normal.x,normal.y);
+		b2Log("> tangent = %f %f\n",tangent.x,tangent.y);
+		
+		int32 pointCount = vc->pointCount;
+
+		for (int32 j = 0; j < pointCount; ++j)
+		{
+			b2VelocityConstraintPoint* vcp = vc->points + j;
+			b2Log("> point %i\n",j);
+			b2Log("  - normalImpulse = %f\n",vcp->normalImpulse);
+			b2Log("  - tangentImpulse = %f\n",vcp->tangentImpulse);
+		}
+		
+		log_fatal(msg);
+	}
+	return x;
+}
+
+const float MAX_IMPULSE = 1000000000;
+
+void limitImpulse(b2VelocityConstraintPoint* vcp, const char* where) {
+	if (vcp->normalImpulse > MAX_IMPULSE) {
+		b2Log("FIXING HUGE IMPULSE %s NORMAL %f\n",where,vcp->normalImpulse);
+		vcp->normalImpulse = MAX_IMPULSE;
+	} else if (vcp->normalImpulse < 0) {
+		b2Log("FIXING NEGATIVE IMPULSE %s NORMAL %f\n",where,vcp->normalImpulse);
+		vcp->normalImpulse = 0;
+	}
+	
+	if (vcp->tangentImpulse > MAX_IMPULSE) {
+		b2Log("FIXING HUGE IMPULSE %s TANGENT %f\n",where,vcp->tangentImpulse);
+		vcp->tangentImpulse = MAX_IMPULSE;
+	} else if (vcp->tangentImpulse < -MAX_IMPULSE) {
+		b2Log("FIXING HUGE IMPULSE %s TANGENT %f\n",where,vcp->tangentImpulse);
+		vcp->tangentImpulse = -MAX_IMPULSE;
+	}
+}
+
 void b2ContactSolver::WarmStart()
 {
 	// Warm start.
@@ -274,10 +326,11 @@ void b2ContactSolver::WarmStart()
 		for (int32 j = 0; j < pointCount; ++j)
 		{
 			b2VelocityConstraintPoint* vcp = vc->points + j;
+			limitImpulse(vcp,"WARM-START");
 			b2Vec2 P = vcp->normalImpulse * normal + vcp->tangentImpulse * tangent;
-			wA -= iA * b2Cross(vcp->rA, P);
+			wA -= checkFloat(iA * b2Cross(vcp->rA, P),"WS1",vc);
 			vA -= mA * P;
-			wB += iB * b2Cross(vcp->rB, P);
+			wB += checkFloat(iB * b2Cross(vcp->rB, P),"WS2",vc);
 			vB += mB * P;
 		}
 
@@ -318,6 +371,7 @@ void b2ContactSolver::SolveVelocityConstraints()
 		for (int32 j = 0; j < pointCount; ++j)
 		{
 			b2VelocityConstraintPoint* vcp = vc->points + j;
+			limitImpulse(vcp,"SOLVE-VELOCITY");
 
 			// Relative velocity at contact
 			b2Vec2 dv = vB + b2Cross(wB, vcp->rB) - vA - b2Cross(wA, vcp->rA);
@@ -336,10 +390,10 @@ void b2ContactSolver::SolveVelocityConstraints()
 			b2Vec2 P = lambda * tangent;
 
 			vA -= mA * P;
-			wA -= iA * b2Cross(vcp->rA, P);
+			wA -= checkFloat(iA * b2Cross(vcp->rA, P),"A1",vc);
 
 			vB += mB * P;
-			wB += iB * b2Cross(vcp->rB, P);
+			wB += checkFloat(iB * b2Cross(vcp->rB, P),"B1",vc);
 		}
 
 		// Solve normal constraints
@@ -364,10 +418,10 @@ void b2ContactSolver::SolveVelocityConstraints()
 				// Apply contact impulse
 				b2Vec2 P = lambda * normal;
 				vA -= mA * P;
-				wA -= iA * b2Cross(vcp->rA, P);
+				wA -= checkFloat(iA * b2Cross(vcp->rA, P),"A2",vc);
 
 				vB += mB * P;
-				wB += iB * b2Cross(vcp->rB, P);
+				wB += checkFloat(iB * b2Cross(vcp->rB, P),"B2",vc);
 			}
 		}
 		else
@@ -451,10 +505,10 @@ void b2ContactSolver::SolveVelocityConstraints()
 					b2Vec2 P1 = d.x * normal;
 					b2Vec2 P2 = d.y * normal;
 					vA -= mA * (P1 + P2);
-					wA -= iA * (b2Cross(cp1->rA, P1) + b2Cross(cp2->rA, P2));
+					wA -= checkFloat(iA * (b2Cross(cp1->rA, P1) + b2Cross(cp2->rA, P2)),"A3",vc);
 
 					vB += mB * (P1 + P2);
-					wB += iB * (b2Cross(cp1->rB, P1) + b2Cross(cp2->rB, P2));
+					wB += checkFloat(iB * (b2Cross(cp1->rB, P1) + b2Cross(cp2->rB, P2)),"B3",vc);
 
 					// Accumulate
 					cp1->normalImpulse = x.x;
@@ -495,10 +549,10 @@ void b2ContactSolver::SolveVelocityConstraints()
 					b2Vec2 P1 = d.x * normal;
 					b2Vec2 P2 = d.y * normal;
 					vA -= mA * (P1 + P2);
-					wA -= iA * (b2Cross(cp1->rA, P1) + b2Cross(cp2->rA, P2));
+					wA -= checkFloat(iA * (b2Cross(cp1->rA, P1) + b2Cross(cp2->rA, P2)),"A4",vc);
 
 					vB += mB * (P1 + P2);
-					wB += iB * (b2Cross(cp1->rB, P1) + b2Cross(cp2->rB, P2));
+					wB += checkFloat(iB * (b2Cross(cp1->rB, P1) + b2Cross(cp2->rB, P2)),"B4",vc);
 
 					// Accumulate
 					cp1->normalImpulse = x.x;
@@ -537,10 +591,10 @@ void b2ContactSolver::SolveVelocityConstraints()
 					b2Vec2 P1 = d.x * normal;
 					b2Vec2 P2 = d.y * normal;
 					vA -= mA * (P1 + P2);
-					wA -= iA * (b2Cross(cp1->rA, P1) + b2Cross(cp2->rA, P2));
+					wA -= checkFloat(iA * (b2Cross(cp1->rA, P1) + b2Cross(cp2->rA, P2)),"A5",vc);
 
 					vB += mB * (P1 + P2);
-					wB += iB * (b2Cross(cp1->rB, P1) + b2Cross(cp2->rB, P2));
+					wB += checkFloat(iB * (b2Cross(cp1->rB, P1) + b2Cross(cp2->rB, P2)),"B5",vc);
 
 					// Accumulate
 					cp1->normalImpulse = x.x;
@@ -577,10 +631,10 @@ void b2ContactSolver::SolveVelocityConstraints()
 					b2Vec2 P1 = d.x * normal;
 					b2Vec2 P2 = d.y * normal;
 					vA -= mA * (P1 + P2);
-					wA -= iA * (b2Cross(cp1->rA, P1) + b2Cross(cp2->rA, P2));
+					wA -= checkFloat(iA * (b2Cross(cp1->rA, P1) + b2Cross(cp2->rA, P2)),"A6",vc);
 
 					vB += mB * (P1 + P2);
-					wB += iB * (b2Cross(cp1->rB, P1) + b2Cross(cp2->rB, P2));
+					wB += checkFloat(iB * (b2Cross(cp1->rB, P1) + b2Cross(cp2->rB, P2)),"B6",vc);
 
 					// Accumulate
 					cp1->normalImpulse = x.x;
@@ -592,6 +646,11 @@ void b2ContactSolver::SolveVelocityConstraints()
 				// No solution, give up. This is hit sometimes, but it doesn't seem to matter.
 				break;
 			}
+		}
+
+		{ // assign check
+			b2Assert(b2IsValid(wA));
+			b2Assert(b2IsValid(wB));
 		}
 
 		m_velocities[indexA].v = vA;
